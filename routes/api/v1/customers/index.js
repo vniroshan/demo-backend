@@ -1,0 +1,127 @@
+"use strict";
+
+const moment = require("moment");
+const { v4: uuidv4 } = require("uuid");
+
+module.exports = async function (fastify, opts) {
+  fastify.get(
+    "",
+    {
+      schema: {
+        tags: ["User"],
+        security: [{ bearerAuth: [] }],
+        query: {
+          type: "object",
+          properties: {
+            page: {
+              type: "integer",
+              default: 1,
+            },
+            limit: {
+              type: "integer",
+              default: 10,
+            },
+            search: {
+              type: "string",
+              default: "",
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        // check access start
+        await fastify.access.isAuth(request, {
+          id: 2,
+          name: "Read",
+        });
+        //  check access end
+
+        const page = request.query.page;
+        const limit = request.query.limit;
+        const search = request.query.search;
+        const skip = (page - 1) * limit;
+        var where = {
+          deleted_at: null,
+          OR: [
+            { name: { contains: search, mode: "insensitive", } },
+            { mobile: { contains: search, mode: "insensitive", } },
+            { email: { contains: search, mode: "insensitive", } },
+          ],
+        };
+        const items = await fastify.prisma.customers.findMany({
+          where: where,
+          skip: skip,
+          take: limit,
+          orderBy: {
+            name: "asc",
+          },
+          select: {
+            id: true,
+            uuid: true,
+            name: true,
+            email: true,
+            mobile: true,
+          },
+        });
+        const totalCount = await fastify.prisma.customers.count({
+          where: where,
+        });
+
+        const totalPages = Math.ceil(totalCount / limit);
+
+        var res = {};
+        res.page = page;
+        res.limit = limit;
+        res.totalPages = totalPages;
+        res.totalCount = totalCount;
+        res.data = items;
+        reply.send(res);
+      } catch (error) {
+        reply.send(error);
+      } finally {
+        await fastify.prisma.$disconnect();
+      }
+    }
+  );
+
+  fastify.get(
+    "/:uuid",
+    {
+      schema: {
+        tags: ["User"],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              default: "",
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        // check access start
+        await fastify.access.isAuth(request, {
+          id: 2,
+          name: "Read",
+        });
+        //  check access end
+        const item = await fastify.prisma.customers.findUnique({
+          where: {
+            uuid: request.params.uuid,
+          },
+        });
+        reply.send(item);
+      } catch (error) {
+        reply.send(error);
+      } finally {
+        await fastify.prisma.$disconnect();
+      }
+    }
+  );
+};

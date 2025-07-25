@@ -1,0 +1,579 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model migrations {
+  id     Int      @id @default(autoincrement())
+  name   String   @db.VarChar(255)
+  run_on DateTime @db.Timestamp(6)
+}
+
+model admins {
+  id           Int        @id @default(autoincrement())
+  uuid         String     @unique @db.VarChar
+  name         String     @db.VarChar
+  email        String     @unique @db.VarChar
+  mobile       String     @db.VarChar
+  country_code String?    @db.VarChar
+  created_at   DateTime?  @db.Timestamptz(6)
+  modified_at  DateTime?  @db.Timestamptz(6)
+  deleted_at   DateTime?  @db.Timestamptz(6)
+  countries    countries? @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "admins_countries_country_code_foreign")
+  users        users[]
+}
+
+model countries {
+  id          Int           @id @default(autoincrement())
+  uuid        String        @unique @db.VarChar
+  name        String        @unique @db.VarChar
+  code        String        @unique @db.VarChar
+  currency    String        @db.VarChar
+  created_at  DateTime?     @db.Timestamptz(6)
+  modified_at DateTime?     @db.Timestamptz(6)
+  deleted_at  DateTime?     @db.Timestamptz(6)
+  admins      admins[]
+  deals       deals[]
+  locations   locations[]
+  products    products[]
+  technicians technicians[]
+  utils       utils[]
+}
+
+model models {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar
+  key         String        @unique @db.VarChar
+  created_at  DateTime?     @db.Timestamptz(6)
+  modified_at DateTime?     @db.Timestamptz(6)
+  deleted_at  DateTime?     @db.Timestamptz(6)
+  permissions permissions[]
+}
+
+model permissions {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar
+  model_id         Int?
+  description      String
+  created_at       DateTime?          @db.Timestamptz(6)
+  modified_at      DateTime?          @db.Timestamptz(6)
+  deleted_at       DateTime?          @db.Timestamptz(6)
+  models           models?            @relation(fields: [model_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "models_permissions_model_id_foreign")
+  role_permissions role_permissions[]
+}
+
+model role_permissions {
+  id            Int          @id @default(autoincrement())
+  role_uuid     String       @db.VarChar
+  permission_id Int?
+  created_at    DateTime?    @db.Timestamptz(6)
+  modified_at   DateTime?    @db.Timestamptz(6)
+  deleted_at    DateTime?    @db.Timestamptz(6)
+  permissions   permissions? @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "permissions_role_permissions_role_id_foreign")
+  roles         roles        @relation(fields: [role_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "roles_role_permissions_role_uuid_foreign")
+
+  @@unique([role_uuid, permission_id], map: "index_role_permissions_role_uuid_permission_id")
+}
+
+model roles {
+  id               Int                @id @default(autoincrement())
+  uuid             String             @unique @db.VarChar
+  name             String             @unique @db.VarChar
+  account_type     String             @db.VarChar
+  created_at       DateTime?          @db.Timestamptz(6)
+  modified_at      DateTime?          @db.Timestamptz(6)
+  deleted_at       DateTime?          @db.Timestamptz(6)
+  role_permissions role_permissions[]
+  users            users[]
+}
+
+model seeds {
+  id          Int       @id @default(autoincrement())
+  model       String?   @db.VarChar
+  model_id    Int?
+  created_at  DateTime? @db.Timestamptz(6)
+  modified_at DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+
+  @@unique([model, model_id], map: "Index_seeds_model_model_id")
+}
+
+model technicians {
+  id                        Int                         @id @default(autoincrement())
+  uuid                      String                      @unique @db.VarChar
+  hubspot_id                String                      @unique @db.VarChar
+  name                      String                      @db.VarChar
+  email                     String                      @unique @db.VarChar
+  mobile                    String?                     @db.VarChar
+  country_code              String?                     @db.VarChar
+  deal_map_name             String?                     @db.VarChar
+  google_group_link         String?
+  created_at                DateTime?                   @db.Timestamptz(6)
+  modified_at               DateTime?                   @db.Timestamptz(6)
+  deleted_at                DateTime?                   @db.Timestamptz(6)
+  bookings                  bookings[]
+  deals                     deals[]
+  locations                 locations[]
+  stripe_transactions       stripe_transactions[]
+  technician_invoices       technician_invoices[]
+  technician_mail_templates technician_mail_templates[]
+  technician_orders         technician_orders[]
+  technician_payments       technician_payments[]
+  technician_products       technician_products[]
+  countries                 countries?                  @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "technicians_countries_country_code_foreign")
+  users                     users[]
+  wise_transactions         wise_transactions[]
+  wise_users                wise_users[]
+}
+
+model users {
+  id                    Int             @id @default(autoincrement())
+  uuid                  String          @unique @db.VarChar
+  email                 String          @unique @db.VarChar
+  role_uuid             String          @db.VarChar
+  admin_uuid            String?         @db.VarChar
+  technician_uuid       String?         @db.VarChar
+  is_active             Boolean?        @default(true)
+  profile_image_url     String?
+  google_calendar_token String?
+  last_login_at         DateTime?       @db.Timestamptz(6)
+  created_at            DateTime?       @db.Timestamptz(6)
+  modified_at           DateTime?       @db.Timestamptz(6)
+  deleted_at            DateTime?       @db.Timestamptz(6)
+  activity_logs         activity_logs[]
+  admins                admins?         @relation(fields: [admin_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "admins_users_admin_uuid_foreign")
+  technicians           technicians?    @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_users_technician_uuid_foreign")
+  roles                 roles           @relation(fields: [role_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "users_roles_role_uuid_foreign")
+}
+
+model activity_logs {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar
+  user_uuid   String    @db.VarChar
+  action      String    @db.VarChar
+  model       String    @db.VarChar
+  model_id    Int?
+  url         String?
+  description String?   @db.VarChar
+  created_at  DateTime? @db.Timestamptz(6)
+  modified_at DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  users       users     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "activity_logs_users_user_uuid_foreign")
+}
+
+model customers {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar
+  hubspot_id  String    @unique @db.VarChar
+  first_name  String    @db.VarChar
+  last_name   String    @db.VarChar
+  email       String    @unique @db.VarChar
+  mobile      String?   @db.VarChar
+  created_at  DateTime? @db.Timestamptz(6)
+  modified_at DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  deals       deals[]
+}
+
+model technician_process {
+  id                         Int                          @id @default(autoincrement())
+  uuid                       String                       @unique @db.VarChar
+  hubspot_id                 String                       @unique @db.VarChar
+  name                       String                       @db.VarChar
+  sort                       Int?
+  created_at                 DateTime?                    @db.Timestamptz(6)
+  modified_at                DateTime?                    @db.Timestamptz(6)
+  deleted_at                 DateTime?                    @db.Timestamptz(6)
+  deals                      deals[]
+  technician_orders          technician_orders[]
+  technician_process_options technician_process_options[]
+}
+
+model technician_process_options {
+  id                      Int                 @id @default(autoincrement())
+  uuid                    String              @unique @db.VarChar
+  name                    String              @db.VarChar
+  sort                    Int?
+  technician_process_uuid String              @db.VarChar
+  created_at              DateTime?           @db.Timestamptz(6)
+  modified_at             DateTime?           @db.Timestamptz(6)
+  deleted_at              DateTime?           @db.Timestamptz(6)
+  technician_orders       technician_orders[]
+  technician_process      technician_process  @relation(fields: [technician_process_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_process_technician_process_options_uuid_foreign")
+}
+
+model products {
+  id                          Int                           @id @default(autoincrement())
+  uuid                        String                        @unique @db.VarChar
+  hubspot_id                  String                        @unique @db.VarChar
+  name                        String                        @db.VarChar
+  sort                        Int?                          @default(1)
+  price                       Decimal                       @db.Decimal
+  currency                    String                        @db.VarChar
+  country_code                String?                       @db.VarChar
+  created_at                  DateTime?                     @db.Timestamptz(6)
+  modified_at                 DateTime?                     @db.Timestamptz(6)
+  deleted_at                  DateTime?                     @db.Timestamptz(6)
+  deal_products               deal_products[]
+  countries                   countries?                    @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "products_countries_country_code_foreign")
+  technician_invoice_products technician_invoice_products[]
+  technician_order_products   technician_order_products[]
+  technician_products         technician_products[]
+}
+
+model technician_orders {
+  id                             Int                         @id @default(autoincrement())
+  uuid                           String                      @unique @db.VarChar
+  name                           String                      @db.VarChar
+  technician_uuid                String                      @db.VarChar
+  deal_uuid                      String                      @db.VarChar
+  technician_process_uuid        String                      @db.VarChar
+  technician_process_option_uuid String?                     @db.VarChar
+  product_image_url              String?
+  created_at                     DateTime?                   @db.Timestamptz(6)
+  modified_at                    DateTime?                   @db.Timestamptz(6)
+  deleted_at                     DateTime?                   @db.Timestamptz(6)
+  status                         String?                     @default("converting") @db.VarChar
+  technician_invoices            technician_invoices[]
+  technician_order_products      technician_order_products[]
+  deals                          deals                       @relation(fields: [deal_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_technician_orders_deal_uuid_foreign")
+  technician_process_options     technician_process_options? @relation(fields: [technician_process_option_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_process_options_orders_technician_process_uuid_forei")
+  technician_process             technician_process          @relation(fields: [technician_process_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_process_orders_technician_process_uuid_foreign")
+  technicians                    technicians                 @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_orders_technician_uuid_foreign")
+  technician_payments            technician_payments[]
+}
+
+model locations {
+  id              Int              @id @default(autoincrement())
+  uuid            String           @unique @db.VarChar
+  name            String           @db.VarChar
+  slug            String           @unique @db.VarChar
+  address         String           @db.VarChar
+  mobile          String           @db.VarChar
+  email           String           @db.VarChar
+  open_days       String           @db.VarChar
+  coor_lat        String           @db.VarChar
+  coor_long       String           @db.VarChar
+  description     String?
+  country_code    String?          @db.VarChar
+  technician_uuid String?          @db.VarChar
+  website_link    String?
+  review_link     String?
+  place_id        String?
+  logo            String?
+  created_at      DateTime?        @db.Timestamptz(6)
+  modified_at     DateTime?        @db.Timestamptz(6)
+  deleted_at      DateTime?        @db.Timestamptz(6)
+  google_reviews  google_reviews[]
+  countries       countries?       @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "locations_countries_country_code_foreign")
+  technicians     technicians?     @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_locations_technician_uuid_foreign")
+}
+
+model deal_products {
+  id           Int       @id @default(autoincrement())
+  uuid         String    @unique @db.VarChar
+  hubspot_id   String    @unique @db.VarChar
+  deal_uuid    String    @db.VarChar
+  product_uuid String    @db.VarChar
+  quantity     Int?      @default(1)
+  is_advance   Boolean?  @default(false)
+  price        Decimal   @db.Decimal
+  currency     String    @db.VarChar
+  created_at   DateTime? @db.Timestamptz(6)
+  modified_at  DateTime? @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  deals        deals     @relation(fields: [deal_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_deals_products_deal_uuid_foreign")
+  products     products  @relation(fields: [product_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_products_product_uuid_foreign")
+}
+
+model deals {
+  id                      Int                     @id @default(autoincrement())
+  uuid                    String                  @unique @db.VarChar
+  hubspot_id              String                  @unique @db.VarChar
+  hubspot_owner_id        String                  @db.VarChar
+  name                    String                  @unique @db.VarChar
+  customer_uuid           String                  @db.VarChar
+  country_code            String?                 @db.VarChar
+  technician_uuid         String                  @db.VarChar
+  price                   Decimal?                @db.Decimal
+  price_paid              Decimal?                @db.Decimal
+  currency                String                  @db.VarChar
+  pipeline_stage_uuid     String?                 @db.VarChar
+  technician_process_uuid String?                 @db.VarChar
+  created_at              DateTime?               @db.Timestamptz(6)
+  modified_at             DateTime?               @db.Timestamptz(6)
+  deleted_at              DateTime?               @db.Timestamptz(6)
+  deal_products           deal_products[]
+  countries               countries?              @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "deals_countries_country_code_foreign")
+  customers               customers               @relation(fields: [customer_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_customers_uuid_foreign")
+  technicians             technicians             @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_deals_technician_uuid_foreign")
+  pipeline_stages         pipeline_stages?        @relation(fields: [pipeline_stage_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "pipeline_stages_deals_technician_uuid_foreign")
+  technician_process      technician_process?     @relation(fields: [technician_process_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_process_deals_technician_uuid_foreign")
+  stripe_transactions     stripe_transactions[]
+  technician_orders       technician_orders[]
+  wise_jar_transactions   wise_jar_transactions[]
+}
+
+model technician_order_products {
+  id                    Int               @id @default(autoincrement())
+  uuid                  String            @unique @db.VarChar
+  technician_order_uuid String            @db.VarChar
+  product_uuid          String            @db.VarChar
+  quantity              Int?              @default(1)
+  created_at            DateTime?         @db.Timestamptz(6)
+  modified_at           DateTime?         @db.Timestamptz(6)
+  deleted_at            DateTime?         @db.Timestamptz(6)
+  products              products          @relation(fields: [product_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_order_products_products_product_uuid_foreign")
+  technician_orders     technician_orders @relation(fields: [technician_order_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_orders_technician_order_products_technician_order_uu")
+}
+
+model technician_products {
+  id              Int         @id @default(autoincrement())
+  uuid            String      @unique @db.VarChar
+  technician_uuid String      @db.VarChar
+  product_uuid    String      @db.VarChar
+  price           Decimal     @db.Decimal
+  stock           Int?        @default(0)
+  is_inventory    Boolean?    @default(false)
+  currency        String      @db.VarChar
+  created_at      DateTime?   @db.Timestamptz(6)
+  modified_at     DateTime?   @db.Timestamptz(6)
+  deleted_at      DateTime?   @db.Timestamptz(6)
+  products        products    @relation(fields: [product_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_products_product_uuid_foreign")
+  technicians     technicians @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_products_technician_uuid_foreign")
+}
+
+model wise_users {
+  id                Int                 @id @default(autoincrement())
+  uuid              String              @unique @db.VarChar
+  wise_id           Int                 @unique
+  profile           Int
+  name              String              @db.VarChar
+  email             String              @db.VarChar
+  country_code      String?             @db.VarChar
+  currency          String?             @db.VarChar
+  technician_uuid   String?             @db.VarChar
+  is_default        Boolean?            @default(false)
+  created_at        DateTime?           @db.Timestamptz(6)
+  modified_at       DateTime?           @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  wise_transactions wise_transactions[]
+  technicians       technicians?        @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_wise_users_technician_uuid_foreign")
+}
+
+model technician_invoice_products {
+  id                      Int                 @id @default(autoincrement())
+  uuid                    String              @unique @db.VarChar
+  product_uuid            String              @db.VarChar
+  quantity                Int?                @default(1)
+  price                   Decimal             @db.Decimal
+  technician_invoice_uuid String              @db.VarChar
+  created_at              DateTime?           @db.Timestamptz(6)
+  modified_at             DateTime?           @db.Timestamptz(6)
+  deleted_at              DateTime?           @db.Timestamptz(6)
+  technician_invoices     technician_invoices @relation(fields: [technician_invoice_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_invoices_technician_order_products_technician_order_")
+  products                products            @relation(fields: [product_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_products_technician_invoice_products_product_uuid_fo")
+}
+
+model technician_invoices {
+  id                          Int                           @id @default(autoincrement())
+  uuid                        String                        @unique @db.VarChar
+  technician_uuid             String                        @db.VarChar
+  technician_order_uuid       String                        @db.VarChar
+  price                       Decimal?                      @db.Decimal
+  status                      String?                       @default("pending") @db.VarChar
+  description                 String?
+  invoice_link                String?
+  created_at                  DateTime?                     @db.Timestamptz(6)
+  modified_at                 DateTime?                     @db.Timestamptz(6)
+  deleted_at                  DateTime?                     @db.Timestamptz(6)
+  admin_note                  String?
+  technician_invoice_products technician_invoice_products[]
+  technician_orders           technician_orders             @relation(fields: [technician_order_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_orders_technician_invoices_technician_order_uuid_for")
+  technicians                 technicians                   @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_products_technician_invoices_technician_uuid_foreig")
+  technician_payments         technician_payments[]
+}
+
+model wise_transactions {
+  id               Int         @id @default(autoincrement())
+  uuid             String      @unique @db.VarChar
+  technician_uuid  String      @db.VarChar
+  wise_user_uuid   String      @db.VarChar
+  wise_transfer_id String      @db.VarChar
+  wise_quote_id    String      @db.VarChar
+  amount           Decimal     @db.Decimal
+  currency         String      @db.VarChar
+  reference        String?
+  status           String      @db.VarChar
+  created_at       DateTime?   @db.Timestamptz(6)
+  modified_at      DateTime?   @db.Timestamptz(6)
+  deleted_at       DateTime?   @db.Timestamptz(6)
+  technicians      technicians @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "wise_transactions_technician_uuid_foreign")
+  wise_users       wise_users  @relation(fields: [wise_user_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "wise_transactions_wise_user_uuid_foreign")
+}
+
+model utils {
+  id           Int        @id @default(autoincrement())
+  uuid         String     @unique @db.VarChar
+  key          String     @db.VarChar
+  value        Decimal    @db.Decimal
+  country_code String?    @db.VarChar
+  created_at   DateTime?  @db.Timestamptz(6)
+  modified_at  DateTime?  @db.Timestamptz(6)
+  deleted_at   DateTime?  @db.Timestamptz(6)
+  countries    countries? @relation(fields: [country_code], references: [code], onDelete: Cascade, onUpdate: Restrict, map: "utils_countries_country_code_foreign")
+
+  @@unique([key, country_code], map: "Index_utils_key_country_code")
+}
+
+model google_reviews {
+  id                        Int       @id @default(autoincrement())
+  uuid                      String    @unique @db.VarChar
+  author_name               String    @db.VarChar
+  rating                    Int
+  text                      String?
+  relative_time_description String?
+  type                      String    @default("google") @db.VarChar
+  location_uuid             String    @db.VarChar
+  profile_image_url         String?
+  created_at                DateTime? @db.Timestamptz(6)
+  modified_at               DateTime? @db.Timestamptz(6)
+  deleted_at                DateTime? @db.Timestamptz(6)
+  locations                 locations @relation(fields: [location_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "reviews_locations_location_uuid_foreign")
+}
+
+model bookings {
+  id                  Int         @id @default(autoincrement())
+  uuid                String      @unique @db.VarChar
+  first_name          String      @db.VarChar
+  last_name           String      @db.VarChar
+  email               String      @db.VarChar
+  mobile              String      @db.VarChar
+  date                String      @db.VarChar
+  time_start          String      @db.VarChar
+  time_end            String      @db.VarChar
+  technician_uuid     String      @db.VarChar
+  status              String?     @default("pending") @db.VarChar
+  google_meeting_link String?
+  created_at          DateTime?   @db.Timestamptz(6)
+  modified_at         DateTime?   @db.Timestamptz(6)
+  deleted_at          DateTime?   @db.Timestamptz(6)
+  technicians         technicians @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "bookings_technician_uuid_foreign")
+}
+
+model wise_jars {
+  id                    Int                     @id @default(autoincrement())
+  uuid                  String                  @unique @db.VarChar
+  wise_balance_id       Int                     @unique
+  profile               Int
+  name                  String                  @db.VarChar
+  type                  String                  @db.VarChar
+  country_code          String?                 @db.VarChar
+  currency              String?                 @db.VarChar
+  transfer_percent      Decimal?                @db.Decimal
+  created_at            DateTime?               @db.Timestamptz(6)
+  modified_at           DateTime?               @db.Timestamptz(6)
+  deleted_at            DateTime?               @db.Timestamptz(6)
+  wise_jar_transactions wise_jar_transactions[]
+}
+
+model pipeline_stages {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar
+  hubspot_id  String    @unique @db.VarChar
+  name        String    @db.VarChar
+  type        String    @db.VarChar
+  sort        Int?
+  created_at  DateTime? @db.Timestamptz(6)
+  modified_at DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  deals       deals[]
+}
+
+model wise_jar_transactions {
+  id               Int       @id @default(autoincrement())
+  uuid             String    @unique @db.VarChar
+  deal_uuid        String    @db.VarChar
+  wise_jar_uuid    String    @db.VarChar
+  wise_transfer_id String?   @db.VarChar
+  wise_quote_id    String?   @db.VarChar
+  amount           Decimal   @db.Decimal
+  currency         String    @db.VarChar
+  reference        String?
+  status           String?   @db.VarChar
+  created_at       DateTime? @db.Timestamptz(6)
+  modified_at      DateTime? @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+  deals            deals     @relation(fields: [deal_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_wise_jar_transactions_deal_uuid_foreign")
+  wise_jars        wise_jars @relation(fields: [wise_jar_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "wise_jar_transactions_wise_jar_uuid_foreign")
+}
+
+model technician_mail_templates {
+  id              Int          @id @default(autoincrement())
+  uuid            String       @unique @db.VarChar
+  title           String?      @db.VarChar
+  body            String
+  technician_uuid String?      @db.VarChar
+  is_default      Boolean?     @default(false)
+  created_at      DateTime?    @db.Timestamptz(6)
+  modified_at     DateTime?    @db.Timestamptz(6)
+  deleted_at      DateTime?    @db.Timestamptz(6)
+  technicians     technicians? @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technicians_technician_mail_templates_technician_uuid_foreign")
+}
+
+model stripe_transactions {
+  id                         Int         @id @default(autoincrement())
+  uuid                       String      @unique @db.VarChar
+  technician_uuid            String      @db.VarChar
+  deal_uuid                  String      @db.VarChar
+  stripe_invoice_id          String      @db.VarChar
+  total_amount               Decimal     @db.Decimal
+  paid_amount                Decimal     @db.Decimal
+  total_amount_excluding_tax Decimal     @db.Decimal
+  currency                   String      @db.VarChar
+  reference                  String?
+  status                     String      @db.VarChar
+  created_at                 DateTime?   @db.Timestamptz(6)
+  modified_at                DateTime?   @db.Timestamptz(6)
+  deleted_at                 DateTime?   @db.Timestamptz(6)
+  deals                      deals       @relation(fields: [deal_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "deals_stripe_transactions_deal_uuid_foreign")
+  technicians                technicians @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "stripe_transactions_technician_uuid_foreign")
+}
+
+model technician_payments {
+  id                      Int                 @id @default(autoincrement())
+  uuid                    String              @unique @db.VarChar
+  technician_uuid         String              @db.VarChar
+  technician_order_uuid   String              @db.VarChar
+  technician_invoice_uuid String              @db.VarChar
+  invoice_amount          Decimal?            @db.Decimal
+  paid_amount             Decimal?            @db.Decimal
+  salary_percent          Decimal?            @db.Decimal
+  status                  String?             @default("paid") @db.VarChar
+  description             String?
+  created_at              DateTime?           @db.Timestamptz(6)
+  modified_at             DateTime?           @db.Timestamptz(6)
+  deleted_at              DateTime?           @db.Timestamptz(6)
+  technician_invoices     technician_invoices @relation(fields: [technician_invoice_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_payments_technician_invoices_technician_invoice_uuid")
+  technician_orders       technician_orders   @relation(fields: [technician_order_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_payments_technician_invoices_technician_order_uuid_f")
+  technicians             technicians         @relation(fields: [technician_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "technician_payments_technician_invoices_technician_uuid_foreign")
+}
+
+model stripe_payouts {
+  id               Int       @id @default(autoincrement())
+  uuid             String    @unique @db.VarChar
+  stripe_payout_id String    @db.VarChar
+  total_amount     Decimal   @db.Decimal
+  currency         String    @db.VarChar
+  country_code     String    @db.VarChar
+  reference        String?
+  status           String    @db.VarChar
+  created_at       DateTime? @db.Timestamptz(6)
+  modified_at      DateTime? @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+}

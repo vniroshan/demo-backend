@@ -1,0 +1,8 @@
+node_modules
+gcp/
+.github
+nginx/
+deploy_scripts/
+.git
+.gitignore
+.env.*
